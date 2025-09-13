@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Docker Build and Push Script
 # Usage: ./docker-build-push.sh [tag_name] [dockerfile_path]
 
 set -e  # Exit on any error
