@@ -7,9 +7,8 @@ from typing import Dict, List, Optional
 # Create module-specific logger
 logger = logging.getLogger(__name__)
 
-from hummingbot.client.config.client_config_map import ClientConfigMap
 from hummingbot.client.config.config_crypt import ETHKeyFileSecretManger
-from hummingbot.client.config.config_helpers import ClientConfigAdapter, ReadOnlyClientConfigAdapter, get_connector_class
+from hummingbot.client.config.config_helpers import get_connector_class
 from hummingbot.client.settings import AllConnectorSettings
 from hummingbot.connector.connector_base import ConnectorBase
 from hummingbot.core.data_type.common import OrderType, PositionAction, PositionMode, TradeType
@@ -64,7 +63,6 @@ class ConnectorManager:
         :return: The connector object.
         """
         BackendAPISecurity.login_account(account_name=account_name, secrets_manager=self.secrets_manager)
-        client_config_map = ClientConfigAdapter(ClientConfigMap())
         conn_setting = AllConnectorSettings.get_connector_settings()[connector_name]
         keys = BackendAPISecurity.api_keys(connector_name)
 
@@ -72,13 +70,10 @@ class ConnectorManager:
         logger.info(f"Creating connector {connector_name} for account {account_name}")
         logger.debug(f"API keys retrieved: {list(keys.keys()) if keys else 'None'}")
 
-        read_only_config = ReadOnlyClientConfigAdapter.lock_config(client_config_map)
-
         init_params = conn_setting.conn_init_parameters(
             trading_pairs=[],
             trading_required=True,
             api_keys=keys,
-            client_config_map=read_only_config,
         )
 
         # Debug logging
@@ -324,6 +319,9 @@ class ConnectorManager:
         This function can be called both during initialization and periodically.
         """
         try:
+            # Update current timestamp
+            connector._set_current_timestamp(time.time())
+
             # Update balances
             await connector._update_balances()
             

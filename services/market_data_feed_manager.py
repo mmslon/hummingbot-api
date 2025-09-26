@@ -184,7 +184,7 @@ class MarketDataFeedManager:
         """
         try:
             # Access connector through MarketDataProvider's _rate_sources LazyDict
-            connector = self.market_data_provider._rate_sources[connector_name]
+            connector = self.market_data_provider._non_trading_connectors[connector_name]
             
             # Check if trading rules are initialized, if not update them
             if not connector.trading_rules or len(connector.trading_rules) == 0:
@@ -252,7 +252,7 @@ class MarketDataFeedManager:
         """
         try:
             # Access connector through MarketDataProvider's _rate_sources LazyDict
-            connector = self.market_data_provider._rate_sources[connector_name]
+            connector = self.market_data_provider._non_trading_connectors[connector_name]
             
             # Get last traded prices
             prices = await connector.get_last_traded_prices(trading_pairs)
@@ -279,8 +279,8 @@ class MarketDataFeedManager:
             Dictionary containing funding information
         """
         try:
-            # Access connector through MarketDataProvider's _rate_sources LazyDict
-            connector = self.market_data_provider._rate_sources[connector_name]
+            # Access connector through MarketDataProvider's _non_trading_connectors LazyDict
+            connector = self.market_data_provider._non_trading_connectors[connector_name]
             
             # Check if this is a perpetual connector and has funding info support
             if hasattr(connector, '_orderbook_ds') and connector._orderbook_ds:
@@ -322,8 +322,8 @@ class MarketDataFeedManager:
             Dictionary containing bid and ask data
         """
         try:
-            # Access connector through MarketDataProvider's _rate_sources LazyDict
-            connector = self.market_data_provider._rate_sources[connector_name]
+            # Access connector through MarketDataProvider's _non_trading_connectors LazyDict
+            connector = self.market_data_provider._non_trading_connectors[connector_name]
             
             # Access the order book data source
             if hasattr(connector, '_orderbook_ds') and connector._orderbook_ds:
@@ -365,8 +365,8 @@ class MarketDataFeedManager:
         try:
             current_time = time.time()
             
-            # Access connector through MarketDataProvider's _rate_sources LazyDict
-            connector = self.market_data_provider._rate_sources[connector_name]
+            # Access connector through MarketDataProvider's _non_trading_connectors LazyDict
+            connector = self.market_data_provider._non_trading_connectors[connector_name]
             
             # Access the order book data source
             if hasattr(connector, '_orderbook_ds') and connector._orderbook_ds:

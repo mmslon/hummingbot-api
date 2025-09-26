@@ -7,15 +7,18 @@ dependencies:
   - fastapi
   - uvicorn
   - boto3
-  - libcxx
+  - libcxx                
   - python-dotenv
-  - pandas-ta>=0.3.14b
-  - pandas>=2.2.3
-  - numpy>=1.26
+  - pandas=2.2.3
+  - numpy=1.26.*          
+  - pandas-ta=0.3.14b0    
   - docker-py
   - pip
   - pip:
       - hummingbot
+      - pandas==2.2.3
+      - pandas-ta<0.4.0       
+      - msgpack>=1.0.5
       - flake8
       - isort
       - pre-commit
@@ -28,4 +31,3 @@ dependencies:
       - psycopg2-binary
       - greenlet
       - pydantic-settings
-      - logfire
