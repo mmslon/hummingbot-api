@@ -11,16 +11,20 @@ load_dotenv()
 
 VERSION = "1.0.1"
 
+
 # Monkey patch save_to_yml to prevent writes to library directory
 def patched_save_to_yml(yml_path, cm):
     """Patched version of save_to_yml that prevents writes to library directory"""
     import logging
+
     logger = logging.getLogger(__name__)
     logger.debug(f"Skipping config write to {yml_path} (patched for API mode)")
     # Do nothing - this prevents the original function from trying to write to the library directory
 
+
 # Apply the patch before importing hummingbot components
 from hummingbot.client.config import config_helpers
+
 config_helpers.save_to_yml = patched_save_to_yml
 
 from hummingbot.core.rate_oracle.rate_oracle import RateOracle
@@ -48,20 +52,17 @@ from routers import (
     market_data,
     portfolio,
     scripts,
-    trading
+    trading,
 )
 
 from config import settings
 
 
 # Set up logging configuration
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # Enable debug logging for MQTT manager
-logging.getLogger('services.mqtt_manager').setLevel(logging.DEBUG)
+logging.getLogger("services.mqtt_manager").setLevel(logging.DEBUG)
 
 
 # Get settings from Pydantic Settings
@@ -94,7 +95,7 @@ async def lifespan(app: FastAPI):
         market_data_provider=market_data_provider,
         rate_oracle=RateOracle.get_instance(),
         cleanup_interval=settings.market_data.cleanup_interval,
-        feed_timeout=settings.market_data.feed_timeout
+        feed_timeout=settings.market_data.feed_timeout,
     )
 
     # Initialize services
@@ -102,19 +103,14 @@ async def lifespan(app: FastAPI):
         broker_host=settings.broker.host,
         broker_port=settings.broker.port,
         broker_username=settings.broker.username,
-        broker_password=settings.broker.password
+        broker_password=settings.broker.password,
     )
 
     accounts_service = AccountsService(
-        account_update_interval=settings.app.account_update_interval,
-        market_data_feed_manager=market_data_feed_manager
+        account_update_interval=settings.app.account_update_interval, market_data_feed_manager=market_data_feed_manager
     )
     docker_service = DockerService()
-    bot_archiver = BotArchiver(
-        settings.aws.api_key,
-        settings.aws.secret_key,
-        settings.aws.s3_default_bucket_name
-    )
+    bot_archiver = BotArchiver(settings.aws.api_key, settings.aws.secret_key, settings.aws.s3_default_bucket_name)
 
     # Initialize database
     await accounts_service.ensure_db_initialized()
@@ -167,20 +163,17 @@ app.add_middleware(
 logfire.configure(send_to_logfire="if-token-present", environment=settings.app.logfire_environment, service_name="hummingbot-api")
 logfire.instrument_fastapi(app)
 
+
 def auth_user(
     credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
     """Authenticate user using HTTP Basic Auth"""
     current_username_bytes = credentials.username.encode("utf8")
     correct_username_bytes = f"{username}".encode("utf8")
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, correct_username_bytes
-    )
+    is_correct_username = secrets.compare_digest(current_username_bytes, correct_username_bytes)
     current_password_bytes = credentials.password.encode("utf8")
     correct_password_bytes = f"{password}".encode("utf8")
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, correct_password_bytes
-    )
+    is_correct_password = secrets.compare_digest(current_password_bytes, correct_password_bytes)
     if not (is_correct_username and is_correct_password) and not debug_mode:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -188,6 +181,7 @@ def auth_user(
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
+
 
 # Include all routers with authentication
 app.include_router(docker.router, dependencies=[Depends(auth_user)])
@@ -202,11 +196,12 @@ app.include_router(market_data.router, dependencies=[Depends(auth_user)])
 app.include_router(backtesting.router, dependencies=[Depends(auth_user)])
 app.include_router(archived_bots.router, dependencies=[Depends(auth_user)])
 
+
 @app.get("/")
 async def root():
     """API root endpoint returning basic information."""
     return {
-        "name": "Hummingbot API",
+        "name": "MMSLON API",
         "version": VERSION,
         "status": "running",
     }
