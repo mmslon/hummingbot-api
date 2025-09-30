@@ -1,13 +1,12 @@
 #!/bin/bash
-
 # Usage: ./docker-build-push.sh [tag_name] [dockerfile_path]
-
 set -e  # Exit on any error
 
 # Configuration
 DOCKER_REPO="sadornik/api"
 DEFAULT_TAG="latest"
 DEFAULT_DOCKERFILE="Dockerfile"
+PLATFORMS="linux/amd64,linux/arm64"  # Add more platforms if needed: linux/arm/v7
 
 # Parse arguments
 TAG_NAME=${1:-$DEFAULT_TAG}
@@ -49,25 +48,26 @@ if [[ ! -f "$DOCKERFILE_PATH" ]]; then
     exit 1
 fi
 
-# Build the Docker image
-print_status "Building Docker image: $DOCKER_REPO:$TAG_NAME"
-print_status "Using Dockerfile: $DOCKERFILE_PATH"
-
-if docker build -f "$DOCKERFILE_PATH" -t "$DOCKER_REPO:$TAG_NAME" .; then
-    print_success "Docker image built successfully!"
-else
-    print_error "Failed to build Docker image"
+# Check if buildx is available
+if ! docker buildx version > /dev/null 2>&1; then
+    print_error "Docker buildx is not available. Please update Docker to a newer version."
     exit 1
 fi
 
-# Ask for confirmation before pushing (optional - remove if you want automatic push)
-print_warning "About to push $DOCKER_REPO:$TAG_NAME to Docker Hub"
-read -p "Do you want to continue? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_warning "Push cancelled by user"
-    exit 0
+# Create and use a new builder instance if it doesn't exist
+BUILDER_NAME="multiplatform-builder"
+if ! docker buildx inspect "$BUILDER_NAME" > /dev/null 2>&1; then
+    print_status "Creating new buildx builder: $BUILDER_NAME"
+    docker buildx create --name "$BUILDER_NAME" --use
+    print_success "Builder created successfully!"
+else
+    print_status "Using existing builder: $BUILDER_NAME"
+    docker buildx use "$BUILDER_NAME"
 fi
+
+# Bootstrap the builder (ensures QEMU is set up)
+print_status "Bootstrapping builder..."
+docker buildx inspect --bootstrap
 
 # Check if user is logged in to Docker Hub
 if ! docker info | grep -q "Username:"; then
@@ -79,13 +79,29 @@ if ! docker info | grep -q "Username:"; then
     fi
 fi
 
-# Push the image to Docker Hub
-print_status "Pushing image to Docker Hub: $DOCKER_REPO:$TAG_NAME"
+# Ask for confirmation before building and pushing
+print_warning "About to build and push $DOCKER_REPO:$TAG_NAME for platforms: $PLATFORMS"
+read -p "Do you want to continue? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    print_warning "Build cancelled by user"
+    exit 0
+fi
 
-if docker push "$DOCKER_REPO:$TAG_NAME"; then
-    print_success "Successfully pushed $DOCKER_REPO:$TAG_NAME to Docker Hub!"
+# Build and push multi-platform image
+print_status "Building multi-platform Docker image: $DOCKER_REPO:$TAG_NAME"
+print_status "Using Dockerfile: $DOCKERFILE_PATH"
+print_status "Target platforms: $PLATFORMS"
+
+if docker buildx build \
+    --platform "$PLATFORMS" \
+    -f "$DOCKERFILE_PATH" \
+    -t "$DOCKER_REPO:$TAG_NAME" \
+    --push \
+    .; then
+    print_success "Multi-platform Docker image built and pushed successfully!"
 else
-    print_error "Failed to push image to Docker Hub"
+    print_error "Failed to build and push Docker image"
     exit 1
 fi
 
@@ -94,12 +110,21 @@ if [[ "$TAG_NAME" != "latest" ]]; then
     read -p "Also tag and push as 'latest'? (y/N): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        print_status "Tagging as latest and pushing..."
-        docker tag "$DOCKER_REPO:$TAG_NAME" "$DOCKER_REPO:latest"
-        docker push "$DOCKER_REPO:latest"
+        print_status "Building and pushing as latest..."
+        docker buildx build \
+            --platform "$PLATFORMS" \
+            -f "$DOCKERFILE_PATH" \
+            -t "$DOCKER_REPO:latest" \
+            --push \
+            .
         print_success "Also pushed as latest!"
     fi
 fi
 
-print_success "Build and push completed successfully!"
+print_success "Multi-platform build and push completed successfully!"
 print_status "Image available at: https://hub.docker.com/r/$DOCKER_REPO"
+print_status "Supported platforms: $PLATFORMS"
+
+# Show image details
+print_status "Verifying multi-platform manifest..."
+docker buildx imagetools inspect "$DOCKER_REPO:$TAG_NAME"
