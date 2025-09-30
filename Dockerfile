@@ -3,7 +3,7 @@ FROM continuumio/miniconda3 AS builder
 
 # Install build dependencies
 RUN apt-get update && \
-    apt-get install -y python3-dev gcc && \
+    apt-get install -y python3-dev gcc g++ build-essential && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -11,6 +11,8 @@ WORKDIR /build
 
 # Copy only the environment file first (for better layer caching)
 COPY environment.yml .
+
+COPY hummingbot ./hummingbot
 
 # Create the conda environment
 RUN conda env create -f environment.yml && \
