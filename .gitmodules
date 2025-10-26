@@ -1,0 +1,3 @@
+[submodule "hummingbot"]
+	path = hummingbot
+	url = git@github.com:mmslon/hummingbot.git
