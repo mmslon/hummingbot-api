@@ -5,6 +5,11 @@
 # --dev: Run API from source using uvicorn
 # Without --dev: Run using docker compose
 
+
+echo "Updating hummingbot submodule..."
+git submodule update --remote hummingbot
+echo "Updated hummingbot to latest commit."
+
 if [[ "$1" == "--dev" ]]; then
     echo "Running API from source..."
     # Activate conda environment and run with uvicorn
